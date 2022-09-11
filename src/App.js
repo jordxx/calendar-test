@@ -3,14 +3,17 @@ import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import './App.css';
-import { Button, Label, Modal, TextInput } from 'flowbite-react';
+import { Modal } from 'flowbite-react';
+import CreateModal from './components/modal/CreateModal';
 
 function App() {
   const [event, setEvent] = useState([])
   const [detail, setDetail] = useState({})
+
   // SHOW MODAL
   const [show, setShow] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
+
   // DUE DATE CALENDAR
   const [dueDate, setDueDate] = useState("")
   const [input, setInput] = useState({
@@ -18,6 +21,8 @@ function App() {
     date: "",
     color: ""
   })
+  const [value, setValue] = useState({})
+
   // FETCH DATA
   useEffect(() => {
     fetch(`http://localhost:4000/Events`, {
@@ -31,9 +36,11 @@ function App() {
       })
       .then((data) => setEvent(data))
       .catch((err) => console.log(err))
+  }, [value])
 
-  }, [])
-
+  const test = (kontol) => {
+    setValue(kontol)
+  }
   // TO HANDLE DELETE EVENTS
   const eventClick = (event) => {
     setShowDetail(true)
@@ -58,35 +65,9 @@ function App() {
     const { name, value } = event.target
     setInput({ ...input, [name]: value })
   }
-  // INPUT DATA TO SERVER
-  const handleSubmit = (event) => {
-    event.preventDefault()
-    const { title } = input
-    fetch(`http://localhost:4000/Events`, {
-      method: 'post',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        title: title,
-        date: dueDate,
-        color: 'red'
-      })
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Create failed")
-        return res.json()
-      })
-      .then((data) => setEvent(data))
-      .finally(() => setShow(false))
-      .catch((err) => console.log(err))
-  }
   const addTask = (selectInfo) => {
     setShow(true)
     setDueDate(selectInfo.startStr)
-  }
-  const onClose = () => {
-    setShow(false)
   }
   const onCloseEvent = () => {
     setShowDetail(false)
@@ -127,36 +108,33 @@ function App() {
       .then(() => setShowDetail(false))
       .catch((err) => console.log(err))
   }
+
+  const dropdrop = (info) => {
+    const dateInfo = info.event.start.toLocaleString('id-ID', { year: 'numeric', day: '2-digit', month: '2-digit' }).split('/')
+
+    fetch(`http://localhost:4000/Events/${info.event._def.publicId}`, {
+      method: 'put',
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: info.event._def.title,
+        date: `${dateInfo[2]}-${dateInfo[1]}-${dateInfo[0]}`,
+        color: info.event._def.ui.backgroundColor
+      })
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Drag Calendar failed");
+        return res.json();
+      })
+      .then((data) => console.log(data))
+      .catch((err) => console.log(err));
+  }
+
   return (
     <div className="App">
-      {/* ADD EVENT */}
-      <Modal
-        show={show}
-        size="md"
-        popup={true}
-        onClose={onClose}
-      >
-        <Modal.Header />
-        <Modal.Body>
-          <form onSubmit={handleSubmit}>
-            <Label
-              htmlFor='formTitle'
-            >Event: </Label>
-            <TextInput
-              type='text'
-              className='border'
-              name='title'
-              value={input.title}
-              placeholder='name'
-              onChange={handleChange}
-            />
-            <div className='mt-4 rounded-xl'>
-              <Button onClick={handleSubmit} className='border text-white text-sm'>SUBMIT</Button>
-
-            </div>
-          </form>
-        </Modal.Body>
-      </Modal>
+      {/* ADD EVENT COMPONENT */}
+      <CreateModal show={show} dueDate={dueDate} setEvent={setEvent} setShow={setShow} test={test} />
 
       {/* UPDATE / DELETE EVENT */}
       <Modal
@@ -173,10 +151,10 @@ function App() {
               <p>{input.title}</p>
               <p>{input.date}</p>
               <form onSubmit={handleUpdate}>
-                <Label
+                <label
                   htmlFor='updateTitle'
-                >Event: </Label>
-                <TextInput
+                >Event: </label>
+                <input
                   type='text'
                   className='border'
                   name='title'
@@ -184,10 +162,10 @@ function App() {
                   onChange={handleChange}
                 />
 
-                <Label
+                <label
                   htmlFor='updateDate'
-                >Date: </Label>
-                <TextInput
+                >Date: </label>
+                <input
                   type='date'
                   className='border'
                   name='date'
@@ -195,10 +173,10 @@ function App() {
                   onChange={handleChange}
                 />
 
-                <Label
+                <label
                   htmlFor='updateColor'
-                >Color: </Label>
-                <TextInput
+                >Color: </label>
+                <input
                   type='text'
                   className='border'
                   name='color'
@@ -233,6 +211,7 @@ function App() {
           events={event}
           eventClick={eventClick} //FOR DELETE
           select={addTask}
+          eventDrop={dropdrop}
         />
       </div>
     </div>
